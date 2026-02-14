@@ -1,0 +1,5 @@
+{
+  "name": "FashionBoard AI v3",
+  "description": "A professional storyboard tool for fashion visualization. Upload reference clothes and models, and generate high-fidelity shots with specific garment details preserved.",
+  "requestFramePermissions": []
+}
