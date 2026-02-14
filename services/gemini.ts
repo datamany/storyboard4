@@ -3,9 +3,6 @@ import { Asset, AspectRatio, ImageSize } from "../types";
 
 const MODEL_NAME = 'gemini-3-pro-image-preview';
 
-/**
- * Strips the data URL prefix to get raw base64 string
- */
 const getBase64Data = (dataUrl: string): string | null => {
   if (!dataUrl || !dataUrl.includes(',')) return null;
   return dataUrl.split(',')[1];
@@ -21,7 +18,7 @@ export const generateShotImage = async (
   seed?: number
 ): Promise<string> => {
   
-  // Prioritize Local Storage for "Bring Your Own Key", fallback to Environment
+  // Always fetch the freshest key to support mid-session updates
   const apiKey = localStorage.getItem('gemini_api_key') || process.env.API_KEY;
 
   if (!apiKey) {
@@ -41,7 +38,6 @@ export const generateShotImage = async (
   4. Scene/Context: ${prompt}
   `;
 
-  // 1. Target Model
   if (modelAsset) {
     const base64 = getBase64Data(modelAsset.base64);
     if (base64) {
@@ -55,7 +51,6 @@ export const generateShotImage = async (
     }
   }
 
-  // 2. Pose Guide
   if (poseAsset) {
     const base64 = getBase64Data(poseAsset.base64);
     if (base64) {
@@ -65,11 +60,10 @@ export const generateShotImage = async (
           data: base64,
         },
       });
-      finalPrompt += `\n[Reference: Pose and Body Stance Guide Only. Ignore the face of this person.]`;
+      finalPrompt += `\n[Reference: Pose and Body Stance Guide Only]`;
     }
   }
 
-  // 3. Garments
   clothesAssets.forEach((clothes) => {
     const base64 = getBase64Data(clothes.base64);
     if (base64) {

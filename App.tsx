@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Asset, Shot, AspectRatio, ImageSize } from './types';
 import { AssetUploader } from './components/AssetUploader';
 import { ShotCard } from './components/ShotCard';
@@ -16,7 +16,7 @@ const App: React.FC = () => {
   const [manualKey, setManualKey] = useState('');
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isQuotaErrorOpen, setIsQuotaErrorOpen] = useState(false); // Quota Error Modal State
+  const [isQuotaErrorOpen, setIsQuotaErrorOpen] = useState(false); 
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isStoryOpen, setIsStoryOpen] = useState(false);
@@ -24,6 +24,16 @@ const App: React.FC = () => {
 
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
+
+  const currentActiveKey = useMemo(() => {
+    return localStorage.getItem('gemini_api_key') || process.env.API_KEY || '';
+  }, [hasApiKey, isSettingsOpen, isQuotaErrorOpen]);
+
+  const maskedKey = useMemo(() => {
+    if (!currentActiveKey) return 'No Key';
+    if (currentActiveKey.length < 8) return '********';
+    return `${currentActiveKey.substring(0, 6)}...${currentActiveKey.substring(currentActiveKey.length - 4)}`;
+  }, [currentActiveKey]);
 
   useEffect(() => {
     const checkApiKey = async () => {
@@ -49,7 +59,6 @@ const App: React.FC = () => {
       } catch (e) {
         console.error("Error checking API key:", e);
       } finally {
-        // Ensure we stop the loading spinner
         setIsCheckingKey(false);
       }
     };
@@ -71,8 +80,13 @@ const App: React.FC = () => {
       setHasApiKey(true);
       setManualKey('');
       setIsSettingsOpen(false);
-      setIsQuotaErrorOpen(false); // Close quota modal if open
+      setIsQuotaErrorOpen(false);
     }
+  };
+
+  const openSettings = () => {
+    setManualKey(localStorage.getItem('gemini_api_key') || '');
+    setIsSettingsOpen(true);
   };
 
   const addAsset = (setter: React.Dispatch<React.SetStateAction<Asset[]>>) => (asset: Asset) => {
@@ -125,7 +139,6 @@ const App: React.FC = () => {
 
   const generatedShots = shots.filter(s => s.generatedImage);
 
-  // 1. Initial Loading State
   if (isCheckingKey) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
@@ -135,13 +148,10 @@ const App: React.FC = () => {
     );
   }
 
-  // 2. First Window (Login / API Key Request)
   if (!hasApiKey) {
     return (
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Ambient Background */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/20 via-slate-950 to-slate-950 pointer-events-none"></div>
-        
         <div className="max-w-lg w-full bg-slate-900/50 backdrop-blur-xl border border-white/10 p-8 md:p-12 rounded-3xl shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-500">
            <div className="text-center mb-10">
              <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-cyan-400 shadow-xl shadow-indigo-500/30 mb-6 transform hover:scale-105 transition-transform duration-500">
@@ -150,7 +160,6 @@ const App: React.FC = () => {
              <h1 className="text-4xl font-black text-white tracking-tight mb-2">FashionBoard AI</h1>
              <p className="text-slate-400 text-sm font-medium">Professional Generative Fashion Studio</p>
            </div>
- 
            <form onSubmit={handleManualKeySubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-500 pl-1">Gemini API Key</label>
@@ -168,12 +177,10 @@ const App: React.FC = () => {
                    </svg>
                 </div>
               </div>
-              
               <Button type="submit" disabled={!manualKey} className="w-full py-4 text-sm font-bold uppercase tracking-widest shadow-xl shadow-indigo-900/20 hover:shadow-indigo-500/40 transition-all">
                 Enter Studio
               </Button>
            </form>
- 
            <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-4 text-center">
               <p className="text-xs text-slate-500">Need an access token?</p>
               <a 
@@ -190,7 +197,6 @@ const App: React.FC = () => {
     );
   }
 
-  // 3. Main App Running
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col lg:flex-row relative">
       
@@ -200,22 +206,26 @@ const App: React.FC = () => {
            <div className="bg-slate-900 border border-red-500/50 rounded-2xl shadow-2xl max-w-lg w-full p-8 animate-in fade-in zoom-in-95 duration-300 relative overflow-hidden">
              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
              
+             <button onClick={() => setIsQuotaErrorOpen(false)} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+             </button>
+
              <div className="flex flex-col items-center text-center gap-4 mb-8">
                 <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-2">
                    <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                 </div>
                 <h3 className="text-2xl font-bold text-white">Quota Limit Exceeded</h3>
                 <p className="text-slate-400 text-sm leading-relaxed">
-                  Your current API key has reached the free tier limits (Rate Limit or Daily Quota). To continue generating high-quality visualizations without interruption, please switch to a paid plan.
+                  Your current API key has reached the free tier limits. To continue generating without interruptions, please switch to a paid plan. Billing is based on official Google API pricing.
                 </p>
                 <a href="https://ai.google.dev/pricing" target="_blank" rel="noreferrer" className="text-indigo-400 text-sm font-bold hover:underline flex items-center gap-1">
-                   Check Gemini API Pricing <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                   View Gemini API Pricing & Documentation <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                 </a>
              </div>
 
              <div className="space-y-6 bg-slate-950/50 p-6 rounded-xl border border-slate-800">
                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Enter Paid API Key</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Update to Paid API Key</label>
                   <input 
                     type="password" 
                     value={manualKey}
@@ -226,7 +236,7 @@ const App: React.FC = () => {
                </div>
                <div className="flex gap-4">
                  <Button variant="secondary" onClick={() => setIsQuotaErrorOpen(false)} className="flex-1">Close</Button>
-                 <Button onClick={handleSaveSettings} disabled={!manualKey.trim()} className="flex-1 bg-red-600 hover:bg-red-500 border-transparent">Save & Retry</Button>
+                 <Button onClick={handleSaveSettings} disabled={!manualKey.trim()} className="flex-1 bg-red-600 hover:bg-red-500 border-transparent">Update Key</Button>
                </div>
              </div>
            </div>
@@ -237,10 +247,15 @@ const App: React.FC = () => {
       {isSettingsOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4" onClick={() => setIsSettingsOpen(false)}>
           <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-md w-full p-8" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-3">
-              <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-              Studio Settings
-            </h3>
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-3">
+                <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                Studio Settings
+              </h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="text-slate-500 hover:text-white">
+                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Update API Key</label>
@@ -256,7 +271,7 @@ const App: React.FC = () => {
                 <Button variant="secondary" onClick={() => setIsSettingsOpen(false)} className="flex-1">Cancel</Button>
                 <Button onClick={handleSaveSettings} disabled={!manualKey.trim()} className="flex-1">Save Key</Button>
               </div>
-              <button onClick={() => { localStorage.removeItem('gemini_api_key'); setHasApiKey(false); setIsSettingsOpen(false); }} className="w-full text-xs text-red-400 hover:text-red-300 transition-colors py-2 opacity-50 hover:opacity-100">Reset Local Configuration</button>
+              <button onClick={() => { localStorage.removeItem('gemini_api_key'); setHasApiKey(false); setIsSettingsOpen(false); }} className="w-full text-xs text-red-400 hover:text-red-300 transition-colors py-2 opacity-50 hover:opacity-100 uppercase font-black tracking-widest">Reset Studio Key</button>
             </div>
           </div>
         </div>
@@ -341,7 +356,7 @@ const App: React.FC = () => {
         </div>
         
         <div className="p-4 border-t border-slate-800 bg-slate-950/30">
-            <button onClick={() => { setManualKey(''); setIsSettingsOpen(true); }} className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-white transition-colors w-full py-3 bg-slate-900/50 hover:bg-slate-800 rounded-xl uppercase tracking-widest border border-slate-800">
+            <button onClick={openSettings} className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-500 hover:text-white transition-colors w-full py-3 bg-slate-900/50 hover:bg-slate-800 rounded-xl uppercase tracking-widest border border-slate-800">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                 Studio Settings
             </button>
@@ -357,14 +372,17 @@ const App: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-3 w-full sm:w-auto">
-            {/* API Key Indicator */}
+            {/* API Key Indicator - Right Top Corner Display */}
             <button 
-              onClick={() => { setManualKey(''); setIsSettingsOpen(true); }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition-all group"
-              title="Configure API Key"
+              onClick={openSettings}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500/50 transition-all group shadow-inner"
+              title="Change API Key"
             >
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 group-hover:text-indigo-400">API Active</span>
+              <div className="flex flex-col items-start leading-none">
+                 <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500 group-hover:text-indigo-400 mb-0.5">Gemini API</span>
+                 <span className="text-[10px] font-mono text-slate-400 group-hover:text-white">{maskedKey}</span>
+              </div>
             </button>
 
             <div className="bg-slate-900 rounded-xl p-1 flex border border-slate-800">
